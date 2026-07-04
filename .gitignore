@@ -16,3 +16,5 @@ Thumbs.db
 # 敏感配置
 application-prod.yml
 application-test.yml
+
+fastapi-service/.venv/
