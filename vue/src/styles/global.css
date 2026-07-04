@@ -1,0 +1,82 @@
+@import './variables.css';
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  overflow: hidden;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-light);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-disabled);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Element Plus 全局覆盖：主题色 */
+:root {
+  --el-color-primary: #4F46E5;
+  --el-color-primary-light-3: #6366F1;
+  --el-color-primary-light-5: #818CF8;
+  --el-color-primary-light-7: #A5B4FC;
+  --el-color-primary-light-8: #C7D2FE;
+  --el-color-primary-light-9: #E0E7FF;
+  --el-color-primary-dark-2: #4338CA;
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 16px;
+  --el-font-family: var(--font-family);
+  --el-bg-color: #F8FAFC;
+  --el-bg-color-overlay: #FFFFFF;
+  --el-border-color: #E2E8F0;
+  --el-border-color-light: #F1F5F9;
+  --el-text-color-primary: #0F172A;
+  --el-text-color-regular: #475569;
+  --el-text-color-secondary: #94A3B8;
+  --el-box-shadow-light: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
