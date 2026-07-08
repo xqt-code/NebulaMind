@@ -49,6 +49,7 @@ request.interceptors.response.use(
 
     // 统一处理 Result<T> 格式：{ code, data, message }
     if (data && typeof data.code !== 'undefined') {
+<<<<<<< HEAD
       if (data.code === 200 || data.code === '200') {
         // 如果存在 data.data，返回 data.data；否则返回整个 data
         return data.data !== undefined ? data.data : data
@@ -56,6 +57,14 @@ request.interceptors.response.use(
       // 业务错误
       ElMessage.error(data.msg || data.message || '请求失败')
       return Promise.reject(new Error(data.msg || data.message || '请求失败'))
+=======
+      if (data.code === 200) {
+        return data.data !== undefined ? data.data : data
+      }
+      // 业务错误
+      ElMessage.error(data.message || '请求失败')
+      return Promise.reject(new Error(data.message || '请求失败'))
+>>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
     }
 
     // 非标准格式直接返回

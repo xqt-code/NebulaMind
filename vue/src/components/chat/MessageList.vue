@@ -4,12 +4,16 @@ import { useChatStore } from '@/stores/chat'
 import MessageItem from './MessageItem.vue'
 import SkeletonLoading from './SkeletonLoading.vue'
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
 const chatStore = useChatStore()
 const listRef = ref(null)
 const containerRef = ref(null)
 
+<<<<<<< HEAD
 /**
  * 点击推荐问题，自动发送消息
  */
@@ -18,6 +22,8 @@ const handleSuggestionClick = (question) => {
   chatStore.sendMessage(question)
 }
 
+=======
+>>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
 /** 自动滚动到底部 */
 const scrollToBottom = async () => {
   await nextTick()
@@ -77,7 +83,10 @@ const isEmpty = computed(() => chatStore.messages.length === 0)
             class="suggestion-chip"
             type="info"
             effect="plain"
+<<<<<<< HEAD
             @click="handleSuggestionClick(q)"
+=======
+>>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
           >
             {{ q }}
           </el-tag>

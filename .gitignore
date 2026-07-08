@@ -23,6 +23,7 @@ hs_err_pid*
 application-*.yml
 application-*.properties
 
+<<<<<<< HEAD
 # ==================== Vue3 / Vite 前端 ====================
 node_modules/
 dist/
@@ -67,3 +68,10 @@ chroma_db/
 # 通用日志
 *.log
 logs/
+=======
+# 敏感配置
+application-prod.yml
+application-test.yml
+
+fastapi-service/.venv/
+>>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
