@@ -25,6 +25,9 @@ knife4j:
 
 logging:
   level:
+    com.nebulamind.kb: debug
+    org.springframework: info
+    # 可以按包名指定不同级别
 
 minio:
   endpoint: http://47.106.21.219:9000

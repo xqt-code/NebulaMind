@@ -1,18 +1,69 @@
-# Java / Maven
-target/
-*.class
-*.jar
-*.log
+# ==================== 系统杂项 ====================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
 
-# IDE
+# ==================== IDE 配置 ====================
 .idea/
 *.iml
 .vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# 系统文件
-.DS_Store
-Thumbs.db
+# ==================== Java SpringBoot Maven ====================
+target/
+*.class
+*.jar
+hs_err_pid*
+# 本地多环境配置（模板application-template.yml可提交）
+application-*.yml
+application-*.properties
 
-# 敏感配置
-application-prod.yml
-application-test.yml
+# ==================== Vue3 / Vite 前端 ====================
+node_modules/
+dist/
+.vite/
+*.log
+logs/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# ==================== FastAPI Python ====================
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.env
+*.env.local
+.pytest_cache/
+*.egg-info/
+python_dist/
+
+# ==================== 隐私密钥、证书、数据库 ====================
+*.pem
+*.key
+*.crt
+*.pfx
+*.db
+*.sqlite
+mysql-data/
+*.sql
+dump-*.sql
+
+# 向量数据库本地存储
+milvus-data/
+chroma_db/
+
+# 通用日志
+*.log
+logs/

@@ -36,10 +36,17 @@
         <lombok.version>1.18.30</lombok.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <minio.version>8.5.9</minio.version>
+        <webflux.version>3.2.12</webflux.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-webflux</artifactId>
+                <version>${webflux.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>io.minio</groupId>
