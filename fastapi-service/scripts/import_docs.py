@@ -37,7 +37,12 @@ def load_documents(file_path: str):
         logger.warning(f"跳过不支持的文件类型: {file_path}")
         return None
     try:
-        loader = loader_cls(file_path)
+        # 对 txt 文件指定 GBK 编码（如果 UTF-8 读取失败则自动尝试 GBK）
+        if ext == ".txt":
+            loader = loader_cls(file_path, encoding="utf-8", autodetect_encoding=True)
+        else:
+            loader = loader_cls(file_path)
+        # 读取源文件 → 解析内容 → 包装成 LangChain 的 Document 对象列表 → 返回给调用方。
         docs = loader.load()
         logger.info(f"加载成功: {file_path}，共 {len(docs)} 页/段")
         return docs

@@ -146,3 +146,8 @@ logger.info(
 #     uvicorn.run(app, host="0.0.0.0", port=8000)
 # 但企业级部署通常用 uvicorn 命令行启动，因此一般不写这部分。
 # =============================================================================
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
