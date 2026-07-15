@@ -18,6 +18,8 @@ import dashscope
 from dashscope import Generation
 from app.core.config import settings
 from app.utils.logger import get_logger
+# 在文件顶部确认已经导入了时间模块（用于后面的 Latency 计算）
+import time
 
 logger = get_logger(__name__)
 
@@ -38,6 +40,7 @@ class LLMRepository:
     def chat(self, prompt: str, system_prompt: str = None) -> str:
         """
         调用通义千问 API
+        返回格式：{"content": "...", "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
         【参数】
         - prompt: 用户的问题（必填）
@@ -55,26 +58,30 @@ class LLMRepository:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        # 2. 调用 API
         try:
             response = Generation.call(
                 model=self.model,
                 messages=messages,
-                result_format="message",   # 返回结构化消息
-                temperature=0.2,           # 降低随机性，让回答更稳定
+                result_format="message",
+                temperature=0.2,
             )
 
-            # 3. 检查响应状态
             if response.status_code == 200:
                 content = response.output.choices[0].message.content
+                usage = response.usage  # dashscope 返回的用量字典
                 logger.info(f"API 调用成功，回答长度: {len(content)} 字符")
-                return content
+
+                # 🔥 返回字典，而不是纯字符串
+                return {
+                    "content": content,
+                    "prompt_tokens": usage.get("input_tokens", 0),
+                    "completion_tokens": usage.get("output_tokens", 0),
+                    "total_tokens": usage.get("total_tokens", 0)
+                }
             else:
-                # API 返回错误（如密钥失效、限流等）
                 logger.error(f"API 调用失败: {response.code} - {response.message}")
                 raise Exception(f"大模型 API 错误: {response.message}")
 
         except Exception as e:
-            # 网络超时、连接失败等异常
             logger.error(f"API 调用异常: {e}")
             raise

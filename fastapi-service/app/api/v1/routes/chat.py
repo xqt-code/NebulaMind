@@ -1,192 +1,136 @@
-"""
-chat.py - 智能问答路由
+# ============================================================================
+# 1. 导入依赖
+# ============================================================================
+# FastAPI 核心组件
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 
-【职责】
-- 定义 URL 路径（/api/v1/chat/ask）
-- 接收 HTTP 请求，提取参数
-- 调用业务层（ChatService）
-- 返回 JSON 响应
-- 以同步或流式方式返回结果
+# Pydantic 数据校验（定义请求/响应结构）
+from pydantic import BaseModel, Field
 
-【不做什么】
-- 不写业务逻辑
-- 不直接调用数据层
+# 类型注解
+from typing import Optional, Dict, Any
 
-【依赖】
-- RagService：核心 RAG 逻辑（待实现）
-- 请求/响应模型：Pydantic 定义
-"""
-
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import json
-import uuid
-
-from app.services.rag_service import RagService
-from app.services.chat_service import ChatService
-from app.core.response import ResponseModel
+# 日志
 from app.utils.logger import get_logger
 
-# 导入 RAG 服务（后续实现）
-from app.services.rag_service import RagService
-from app.core.response import ResponseModel
-from app.utils.logger import get_logger
+# 统一响应构建器（确保响应格式一致）
+from app.core.response_builder import ResponseBuilder
 
+# 业务服务层（RAG 服务）
+from app.services.rag_service import RagService
+
+# 创建日志记录器
 logger = get_logger(__name__)
 
-
-# =============================================================================
-# 1. 定义路由
-# =============================================================================
+# ============================================================================
+# 2. 定义路由对象
+# ============================================================================
+# 创建一个 APIRouter 实例，所有接口以 /chat 为前缀
+# tags 用于在 Swagger 文档中分组
 router = APIRouter(prefix="/chat", tags=["智能问答"])
 
-# =============================================================================
-
-# 2. 定义请求/响应模型（Pydantic）
-# =============================================================================
+# ============================================================================
+# 3. 定义请求体模型（Pydantic）
+# ============================================================================
 class AskRequest(BaseModel):
-    """问答请求体"""
-    question: str                     # 用户问题
-    tenant_id: Optional[str] = "1"    # 租户 ID（多租户隔离）
-    conversation_id: Optional[str] = None  # 会话 ID（多轮对话）
-    stream: bool = False              # 是否流式返回
+    """
+    问答请求体
+    - question: 用户问题（必填，长度至少 1）
+    - tenant_id: 租户 ID（可选，默认为 "1"）
+    - stream: 是否流式返回（暂时保留，后续扩展）
+    """
+    question: str = Field(..., min_length=1, description="用户问题")
+    tenant_id: Optional[str] = Field(default="1", description="租户 ID")
+    stream: bool = Field(default=False, description="是否流式返回（暂未实现）")
 
-class AskResponse(BaseModel):
-    """问答响应体（非流式）"""
-    answer: str
-    references: List[Dict[str, Any]]
-    conversation_id: str
-    confidence: float
-    has_answer: bool
+    # 示例数据（用于 Swagger 文档展示）
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "question": "RAG 和长上下文有什么区别？",
+                "tenant_id": "1",
+                "stream": False
+            }
+        }
 
+# ============================================================================
+# 4. 初始化业务服务（依赖注入）
+# ============================================================================
+# 创建 RagService 实例，在请求处理中复用
+# 注意：这里我们直接实例化了，更规范的写法是用 Depends 注入
+# 但为了简单清晰，我们先直接创建
+rag_service = RagService()
 
-# =============================================================================
-# 3. 初始化 RAG 服务（单例，全局复用）
-# =============================================================================
-# 创建业务层实例（依赖注入）
-chat_service = ChatService()
-
-# =============================================================================
-# 4. 核心接口
-# =============================================================================
-@router.post("/ask")
+# ============================================================================
+# 5. 核心接口：问答
+# ============================================================================
+@router.post(
+    "/ask",
+    response_model=Dict[str, Any],  # 返回任意字典（由 ResponseBuilder 保证格式统一）
+    summary="智能问答",
+    description="基于 RAG 的企业内部知识库问答，支持引用溯源"
+)
 async def ask_question(request: AskRequest):
     """
-    智能问答接口
+    处理用户问答请求
 
-    【流程】
-    1. 记录日志（便于追踪）
-    2. 调用业务层（ChatService）
-    3. 封装统一响应返回
+    流程：
+        1. 记录请求日志
+        2. 调用 RagService.ask() 执行完整 RAG 流程
+        3. 返回统一格式的 JSON 响应
 
-    支持两种模式：
-    - stream=False：返回完整 JSON（适合简单场景）
-    - stream=True：返回 SSE 流式数据（适合实时打字效果）
-
-    工作流程：
-    1. 校验参数
-    2. 调用 RagService 执行完整 RAG 流程
-    3. 根据 stream 参数选择返回方式
+    异常处理：
+        - 如果服务内部异常，返回 500 错误
+        - 参数校验失败会由 FastAPI 自动处理（422）
     """
+    # ---- 1. 记录请求日志 ----
     logger.info(
-        f"收到问答请求: question={request.question[:50]}, "
+        f"收到问答请求: question={request.question[:50]}..., "
         f"tenant={request.tenant_id}, stream={request.stream}"
     )
 
-    # ---- 步骤 1：参数校验 ----
-    if not request.question or len(request.question.strip()) == 0:
-        raise HTTPException(status_code=400, detail="问题不能为空")
+    try:
+        # ---- 2. 调用业务层 ----
+        # RagService.ask 会执行：缓存查询 → 向量检索 → Prompt 构建 → LLM 调用 → 结果缓存
+        # 返回统一格式的字典（包含 answer、references、confidence、has_answer）
+        result = rag_service.ask(
+            question=request.question,
+            tenant_id=request.tenant_id
+        )
 
-    # ---- 步骤 2：生成或复用会话 ID ----
-    conversation_id = request.conversation_id or str(uuid.uuid4())
+        # ---- 3. 返回成功响应 ----
+        # 注意：result 已经是 ResponseBuilder 构建好的格式，直接返回 JSONResponse
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=result
+        )
 
-    # ---- 步骤 3：调用 Chat 服务 ----
-    result = chat_service.ask(
-        question=request.question,
-        tenant_id=request.tenant_id
-    )
+    except Exception as e:
+        # ---- 4. 异常处理（兜底） ----
+        # 捕获所有未预料的异常，记录日志，返回 500
+        logger.error(f"问答处理异常: {e}", exc_info=True)
+        # 使用 ResponseBuilder 统一构建错误响应
+        error_response = ResponseBuilder.error(str(e))
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=error_response
+        )
 
-    # 封装统一响应
-    return ResponseModel.success(data=result)
-
-
-# =============================================================================
-# 5. 可选的额外接口：健康检查
-# =============================================================================
-@router.get("/health")
+# ============================================================================
+# 6. 可选接口：健康检查（用于调试）
+# ============================================================================
+@router.get(
+    "/health",
+    summary="问答服务健康检查",
+    description="检查问答服务是否可用"
+)
 async def chat_health():
-    """检查聊天服务是否可用"""
-    return ResponseModel.success(data={"status": "ok", "service": "chat"})
-
-
-
-'''
-from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Optional, List
-
-from app.core.response import ResponseModel
-from app.models.request import AskRequest
-
-
-
-router = APIRouter(prefix="/chat", tags=["智能问答"])
-
-class AskRequest(BaseModel):
-    question: str
-    tenant_id: str = "1"
-
-@router.post("/ask")
-async def ask_question(request: AskRequest):
-    """智能问答接口 - SSE 流式返回"""
-    async def generate():
-        # 这里调用 RAG 服务，逐 token 返回
-        async for chunk in rag_service.ask_stream(request.question, request.tenant_id):
-            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-    
-    """TODO: 调用 rag_service.ask() 实现完整的 RAG 问答流程
-
-    RAG 全流程说明：
-    1. 【缓存查询】调用 cache_service.get_similar_question()
-       - 检查是否有历史相似问题的缓存答案
-       - 命中缓存直接返回，避免 LLM 调用
-
-    2. 【向量检索】调用 embedding_service.embed() + vector_service.search()
-       - 将用户问题转为向量
-       - 在向量库中检索 Top-K 相关文档片段
-
-    3. 【重排序】调用 rerank_service.rerank()
-       - 对粗排结果进行精排（Cross-Encoder）
-       - 取 Top-N 最相关文档
-
-    4. 【Prompt 构建】组装 system_prompt + context + user question
-       - 将检索到的文档片段作为上下文注入 Prompt
-       - 设定角色、输出格式等约束
-
-    5. 【LLM 调用】调用 llm_service.chat()
-       - 使用通义千问大模型生成回答
-       - 支持 JSON Mode 结构化输出
-
-    6. 【结果缓存】调用 cache_service.set_cache()
-       - 将问答对存入语义缓存
-       - 为后续相似问题提供快速命中
-
-    面试讲：RAG 的三个核心挑战：
-    - 怎么召回得准（Embedding 质量 + 检索策略）
-    - 怎么重排得好（Reranker 精排）
-    - 怎么控制成本（语义缓存 + 多级缓存）
     """
-    # TODO: 实现 RAG 问答流程
-    return ResponseModel.success(
-        data={
-            "answer": "RAG 问答功能待实现",
-            "references": [],
-            "conversation_id": request.conversation_id or "new",
-            "confidence": 0.0,
-            "has_answer": False,
-        }
-    )
-'''
+    简单的健康检查端点，确认服务是否正常运行
+    """
+    return {
+        "status": "ok",
+        "service": "chat",
+        "rag_loaded": rag_service.vector_store is not None
+    }

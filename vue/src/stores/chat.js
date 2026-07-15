@@ -2,14 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { createSSEStream, createMockStream } from '@/utils/sse'
 
-<<<<<<< HEAD
+
 // 在文件顶部引入真实的 API（确保 `api/chat.js` 已存在）
 // 确保顶部已经导入了 askQuestion 和 ElMessage
 import { askQuestion } from '@/api/chat'
 import { ElMessage } from 'element-plus'
 
-=======
->>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
+
 /**
  * 聊天功能 Store
  * 管理消息列表、流式状态、会话控制
@@ -126,12 +125,12 @@ export const useChatStore = defineStore('chat', () => {
   })
 
   /**
-<<<<<<< HEAD
+
    * 发送消息（真实调用后端）
-=======
+
    * 发送消息
    * @param {string} content - 用户输入内容
->>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
+
    */
   const sendMessage = async (content) => {
     if (!content.trim() || isStreaming.value) return
@@ -145,7 +144,6 @@ export const useChatStore = defineStore('chat', () => {
     messages.value.push(aiMsg)
     streamingIndex.value = messages.value.length - 1
 
-<<<<<<< HEAD
     isStreaming.value = true
     streamingStatus.value = '思考中...'
 
@@ -177,7 +175,7 @@ export const useChatStore = defineStore('chat', () => {
       streamingIndex.value = -1
     }
   }
-=======
+
     // 开始流式
     isStreaming.value = true
     streamingStatus.value = 'thinking'
@@ -403,7 +401,7 @@ export const useChatStore = defineStore('chat', () => {
         finishStreaming()
       },
     })
->>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
+
 
     // ====== 真实 SSE 接口调用（Phase 2 启用） ======
     // cancelStream = createSSEStream('/api/chat/stream', {
@@ -413,10 +411,7 @@ export const useChatStore = defineStore('chat', () => {
     //   onComplete(metadata) { ... },
     //   onError(error) { ... },
     // })
-<<<<<<< HEAD
-=======
-  }
->>>>>>> ab1e264e0129d4ed3b7ffc3a0970dfb17aba3f34
+
 
   /**
    * 停止生成

@@ -1,6 +1,7 @@
 package com.nebulamind.kb.api.controller;
 
 import com.nebulamind.kb.common.result.Result;
+import com.nebulamind.kb.service.service.ChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,28 +17,15 @@ import java.util.Map;
 public class ChatController {
 
     @Autowired
-    private WebClient.Builder webClientBuilder;
+    private ChatService chatService; // 注入业务层
 
     @PostMapping("/ask")
     @Operation(summary = "智能问答")
     public Result<Map<String, Object>> ask(@RequestBody Map<String, Object> request) {
-        String fastapiUrl = "http://localhost:8000/api/v1/chat/ask";
-        try {
-            Map response = webClientBuilder.build()
-                    .post()
-                    .uri(fastapiUrl)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-
-            // 显式类型转换，解决泛型推断问题
-            @SuppressWarnings("unchecked")
-            Map<String, Object> data = (Map<String, Object>) response.get("data");
-            return Result.success(data);
-        } catch (Exception e) {
-            return Result.fail("聊天服务暂时不可用：" + e.getMessage());
-        }
+        // Controller 只做三件事：接收 → 转交 → 返回
+        // 任何 try-catch 都不应该在这里处理，应该交给全局异常拦截器（@ControllerAdvice）
+        Map<String, Object> data = chatService.ask(request);
+        return Result.success(data);
     }
 }
 
