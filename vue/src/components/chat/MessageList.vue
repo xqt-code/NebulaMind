@@ -67,13 +67,13 @@ const isEmpty = computed(() => chatStore.messages.length === 0)
       </div>
       <h2 class="empty-title">开始对话</h2>
       <p class="empty-desc">
-        向 AI 助手提问，探索 NebulaMind 知识库中的智慧。
+        向 AI典设 助手提问，探索 NebulaMind 知识库中的智慧。
       </p>
       <div class="empty-suggestions">
         <span class="suggestion-label">试试这些：</span>
         <div class="suggestion-chips">
           <el-tag
-            v-for="q in ['什么是 RAG？', 'Milvus 有哪些索引类型？', 'RAG 和 Fine-tuning 的区别？']"
+            v-for="q in ['10kV架空线路对地距离是多少？', '导线截面怎么选？', '杆塔型号有哪些？']"
             :key="q"
             class="suggestion-chip"
             type="info"

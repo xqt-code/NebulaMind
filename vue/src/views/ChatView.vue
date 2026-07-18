@@ -16,7 +16,7 @@ const chatStore = useChatStore()
           <ChatDotRound />
         </el-icon>
         <div>
-          <h1 class="chat-header-title">NebulaMind 知识库</h1>
+          <h1 class="chat-header-title">NebulaMind 电力典设助手</h1>
           <p class="chat-header-desc">基于 RAG 架构的企业级智能问答</p>
         </div>
       </div>

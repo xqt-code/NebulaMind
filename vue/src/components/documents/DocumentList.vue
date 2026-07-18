@@ -1,13 +1,12 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search,
   Document,
   Delete,
   Link,
   View,
-  RefreshRight,
-  WarningFilled,
 } from '@element-plus/icons-vue'
 import { useDocumentsStore } from '@/stores/documents'
 
@@ -30,14 +29,14 @@ const handleClearSearch = () => {
 /** 删除确认 */
 const handleDelete = (doc) => {
   ElMessageBox.confirm(
-    `确定要删除「${doc.name}」吗？此操作不可撤销。`,
-    '确认删除',
-    {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-      confirmButtonClass: 'el-button--danger',
-    }
+      `确定要删除「${doc.name}」吗？此操作不可撤销。`,
+      '确认删除',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      }
   ).then(() => {
     documentsStore.removeDocument(doc.id)
     ElMessage.success('文档已删除')
@@ -77,13 +76,13 @@ const getTypeColor = (type) => {
     <!-- 搜索栏 -->
     <div class="list-toolbar">
       <el-input
-        v-model="searchText"
-        placeholder="搜索文档名称..."
-        :prefix-icon="Search"
-        clearable
-        class="search-input"
-        @input="handleSearch"
-        @clear="handleClearSearch"
+          v-model="searchText"
+          placeholder="搜索文档名称..."
+          :prefix-icon="Search"
+          clearable
+          class="search-input"
+          @input="handleSearch"
+          @clear="handleClearSearch"
       />
       <div class="toolbar-info">
         <span class="toolbar-count">
@@ -95,9 +94,9 @@ const getTypeColor = (type) => {
     <!-- 文档卡片列表 -->
     <div v-if="documentsStore.filteredDocuments.length > 0" class="documents-grid">
       <div
-        v-for="doc in documentsStore.filteredDocuments"
-        :key="doc.id"
-        class="doc-card"
+          v-for="doc in documentsStore.filteredDocuments"
+          :key="doc.id"
+          class="doc-card"
       >
         <!-- 文件类型标识 -->
         <div class="doc-card-header">
@@ -109,9 +108,9 @@ const getTypeColor = (type) => {
               {{ doc.type.toUpperCase() }}
             </span>
             <el-tag
-              :type="documentsStore.getStatusConfig(doc.status).type"
-              size="small"
-              effect="plain"
+                :type="documentsStore.getStatusConfig(doc.status).type"
+                size="small"
+                effect="plain"
             >
               {{ documentsStore.getStatusConfig(doc.status).label }}
             </el-tag>
@@ -131,29 +130,29 @@ const getTypeColor = (type) => {
         <!-- 操作按钮 -->
         <div class="doc-actions">
           <el-button
-            link
-            type="primary"
-            :icon="View"
-            size="small"
-            @click="handleViewDetail(doc)"
+              link
+              type="primary"
+              :icon="View"
+              size="small"
+              @click="handleViewDetail(doc)"
           >
             详情
           </el-button>
           <el-button
-            link
-            type="primary"
-            :icon="Link"
-            size="small"
-            @click="handleCopyLink(doc)"
+              link
+              type="primary"
+              :icon="Link"
+              size="small"
+              @click="handleCopyLink(doc)"
           >
             复制链接
           </el-button>
           <el-button
-            link
-            type="danger"
-            :icon="Delete"
-            size="small"
-            @click="handleDelete(doc)"
+              link
+              type="danger"
+              :icon="Delete"
+              size="small"
+              @click="handleDelete(doc)"
           >
             删除
           </el-button>
@@ -165,7 +164,7 @@ const getTypeColor = (type) => {
     <div v-else class="documents-empty">
       <el-empty :image-size="100" description="暂无文档">
         <template #image>
-          <el-icon :size="56" color="var(--color-text-disabled)"><Document /></el-icon>
+          <el-icon :size="56" color="#9ca3af"><Document /></el-icon>
         </template>
         <template #description>
           <p class="empty-text">
@@ -187,8 +186,8 @@ const getTypeColor = (type) => {
 .list-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-xl);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .search-input {
@@ -198,36 +197,36 @@ const getTypeColor = (type) => {
 .toolbar-info {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 8px;
 }
 
 .toolbar-count {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  font-size: 13px;
+  color: #6b7280;
 }
 
 /* ---- Documents Grid ---- */
 .documents-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-lg);
+  gap: 16px;
 }
 
 /* ---- Document Card ---- */
 .doc-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  transition: all var(--transition-fast);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 12px;
 }
 
 .doc-card:hover {
-  border-color: var(--color-primary-light);
-  box-shadow: var(--shadow-md);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .doc-card-header {
@@ -239,7 +238,7 @@ const getTypeColor = (type) => {
 .doc-type-icon {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,41 +253,41 @@ const getTypeColor = (type) => {
 
 .doc-type-badge {
   font-size: 10px;
-  font-weight: var(--font-weight-bold);
+  font-weight: 700;
   letter-spacing: 0.5px;
-  font-family: var(--font-mono);
 }
 
 .doc-name {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-normal);
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-all;
+  margin: 0;
 }
 
 .doc-info {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .doc-info-sep {
-  color: var(--color-text-disabled);
+  color: #d1d5db;
 }
 
 .doc-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-border-light);
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
 }
 
 /* ---- Empty ---- */
@@ -297,13 +296,13 @@ const getTypeColor = (type) => {
   align-items: center;
   justify-content: center;
   min-height: 300px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-tertiary);
+  font-size: 14px;
+  color: #6b7280;
 }
 </style>

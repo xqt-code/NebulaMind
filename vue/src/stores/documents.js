@@ -10,39 +10,33 @@ export const useDocumentsStore = defineStore('documents', () => {
   const documents = ref([
     {
       id: 'doc_001',
-      name: 'RAG 技术白皮书 v2.3.pdf',
+      name: '国家电网有限公司配电网工程典型设计10kV架空线路分册_2024版.pdf',
       type: 'pdf',
-      size: 2457600,
+      size: 81717416,
       uploadTime: Date.now() - 86400000 * 2,
       status: 'parsed',
+      description: '2024版10kV架空线路典型设计',
       url: '/api/documents/doc_001/download',
     },
     {
       id: 'doc_002',
-      name: '企业知识库架构设计.md',
-      type: 'markdown',
-      size: 51200,
+      name: '湘电公司设备〔2026〕117号 国网湖南省电力有限公司关于印发配电网防雷指导意见的通知',
+      type: 'pdf',
+      size: 2646445,
       uploadTime: Date.now() - 86400000,
       status: 'parsed',
+      description: '2026版10kV防雷指导意见',
       url: '/api/documents/doc_002/download',
     },
     {
       id: 'doc_003',
-      name: 'LLM 应用开发指南.pdf',
+      name: '国家电网有限公司配电网工程典型设计10kV配电站房分册_2024.pdf',
       type: 'pdf',
-      size: 8388608,
+      size: 33790247,
       uploadTime: Date.now() - 3600000,
       status: 'parsing',
+      description: '2024版10kV配电站房分册',
       url: '/api/documents/doc_003/download',
-    },
-    {
-      id: 'doc_004',
-      name: 'API 接口文档.docx',
-      type: 'word',
-      size: 1024000,
-      uploadTime: Date.now() - 7200000,
-      status: 'failed',
-      url: '/api/documents/doc_004/download',
     },
   ])
 
@@ -85,7 +79,7 @@ export const useDocumentsStore = defineStore('documents', () => {
    * 更新文档状态
    */
   const updateDocumentStatus = (docId, status) => {
-    const doc = documents.value.find((d) => d.id === docId)
+    const doc = documents.value.find((d) => String(d.id) === String(docId))
     if (doc) {
       doc.status = status
     }
