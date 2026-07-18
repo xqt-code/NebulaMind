@@ -1,7 +1,5 @@
 package com.nebulamind.kb.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.nebulamind.kb.common.entity.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -10,81 +8,95 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 文档实体类。
- * 对应数据库表 biz_document，用于存储上传的文档信息。
+ *
+ * 对应数据库表：biz_document
+ * 职责：存储典则文档的元数据 + 异步解析状态追踪。
+ *
+ * 字段与数据库列映射关系：
+ *   - 驼峰命名自动转下划线（如 originalFileName → original_file_name）
+ *
+ * 核心设计：
+ *   1. 文件元数据字段：记录上传时的文件信息，用于展示和下载。
+ *   2. 解析状态字段：支持前端轮询查询解析进度。
+ *   3. 继承 BaseEntity：自动获得 id、tenantId、审计时间、逻辑删除。
  *
  * @author NebulaMind
- */
-/**
- * 文档实体类（员工知识库文档存储）
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_document")
-@Schema(description = "员工知识库文档存储实体")
+@Schema(description = "电力典则文档实体")
 public class Document extends BaseEntity {
 
-    // ========== 前端传入字段（来自 DocumentUploadRequest） ==========
+    // ================================================================
+    // 一、文件元信息（上传时由 Service 层填充）
+    // ================================================================
 
-    @Schema(description = "文档分类ID")
-    private Long categoryId;
-
-    @Schema(description = "文档备注说明")
-    private String remark;
-
-    @Schema(description = "是否公开：0-私有，1-公开")
-    private Integer isPublic;
-
-
-    // ========== 文件元信息（后端解析 MultipartFile 自动填充） ==========
-
-    @Schema(description = "原始文件名称（员工上传的文件名）")
+    @Schema(description = "原始文件名称（用户上传时的文件名）", example = "典则2018_10kV架空线路.pdf")
     private String originalFileName;
 
-    @Schema(description = "文件存储唯一名称（MinIO/OSS 文件名，防止重名覆盖）")
+    @Schema(description = "文件存储唯一名称（UUID 生成，防止重名覆盖）", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890.pdf")
     private String storageFileName;
 
-    @Schema(description = "文件存储完整访问路径")
+    @Schema(description = "文件访问完整路径（MinIO 或本地存储的 URL）", example = "http://localhost:9000/bucket/a1b2c3d4.pdf")
     private String fileUrl;
 
-    @Schema(description = "文件大小（字节）")
+    @Schema(description = "文件大小（字节）", example = "15728640")
     private Long fileSize;
 
-    @Schema(description = "文件MIME类型：application/pdf、application/msword等")
+    @Schema(description = "文件 MIME 类型", example = "application/pdf")
     private String mimeType;
 
-    @Schema(description = "文件后缀：pdf/docx/txt/xlsx")
+    @Schema(description = "文件后缀（小写）", example = "pdf")
     private String fileSuffix;
 
+    // ================================================================
+    // 二、异步解析状态追踪（前端轮询依赖的核心字段）
+    // ================================================================
 
-    // ========== 操作溯源字段（自动填充） ==========
+    @Schema(description = "解析状态: PENDING（待处理）| PARSING（解析中）| PARSED（解析完成）| FAILED（解析失败）",
+            example = "PARSING", allowableValues = {"PENDING", "PARSING", "PARSED", "FAILED"})
+    private String parseStatus;
 
-    @Schema(description = "上传人用户ID")
-    @TableField(fill = FieldFill.INSERT)
-    private Long createUserId;
+    @Schema(description = "解析进度（0-100），前端用于展示进度条", example = "65")
+    private Integer parseProgress;
 
-    @Schema(description = "上传人账号名称")
-    @TableField(fill = FieldFill.INSERT)
-    private String createUserName;
+    @Schema(description = "解析结果 JSON（存典则表格、规则等结构化数据）")
+    private String parseResult;
 
-    @Schema(description = "更新人ID")
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateUserId;
+    @Schema(description = "解析失败时的错误信息（便于排查问题）", example = "PDF 表格格式异常，无法抽取")
+    private String errorMessage;
 
+    // ================================================================
+    // 三、保留旧业务字段（用 @TableField(exist = false) 忽略）
+    //    不映射到数据库，但保留在代码中供未来扩展使用。
+    //    exist = false 表示 MyBatis-Plus 在增删改查时忽略这些字段。
+    // ================================================================
 
-    // ========== 大模型解析 RAG 业务专属字段 ==========
+    // @TableField(exist = false)
+    // private Long categoryId;          // 文档分类 ID（未来用于按专业分类）
 
-    @Schema(description = "文档纯文本内容（提取后给大模型解析使用）")
-    private String docContent;
+    // @TableField(exist = false)
+    // private String remark;            // 文档备注
 
-    @Schema(description = "大模型提取的文档摘要（前端展示预览）")
-    private String docSummary;
+    // @TableField(exist = false)
+    // private Integer isPublic;         // 是否公开（未来用于多租户共享）
 
-    @Schema(description = "向量库唯一ID（Milvus 主键，检索用）")
-    private String vectorId;
+    // @TableField(exist = false)
+    // private String docContent;        // 文档纯文本（RAG 解析后的内容）
 
-    @Schema(description = "文档解析状态：0-待解析，1-解析成功，2-解析失败")
-    private Integer parseStatus;
+    // @TableField(exist = false)
+    // private String docSummary;        // 文档摘要（大模型生成）
 
-    @Schema(description = "解析失败原因（用于排查大模型读取文档报错）")
-    private String parseErrorMsg;
+    // @TableField(exist = false)
+    // private String vectorId;          // 向量库 ID（对接 Milvus 时使用）
+
+    // @TableField(exist = false)
+    // private Long createUserId;        // 上传人 ID（将来接用户系统时启用）
+
+    // @TableField(exist = false)
+    // private String createUserName;    // 上传人名称（将来接用户系统时启用）
+
+    // @TableField(exist = false)
+    // private Long updateUserId;        // 更新人 ID（将来接用户系统时启用）
 }

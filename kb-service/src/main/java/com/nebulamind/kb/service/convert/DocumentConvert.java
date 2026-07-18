@@ -1,6 +1,7 @@
 package com.nebulamind.kb.service.convert;
 
 import com.nebulamind.kb.dao.entity.Document;
+import com.nebulamind.kb.service.dto.DocumentResponse;
 import com.nebulamind.kb.service.dto.DocumentUploadRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -8,64 +9,189 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 /**
- * 文档上传请求DTO 与 Document数据库实体 对象转换器
- * 基于MapStruct实现编译期自动生成转换代码，避免手动set/get冗余代码
- * 适用场景：文件上传接口接收前端参数后，快速转换为数据库保存实体
- * 转换规则说明：
- * 1. 同名同类型字段自动映射：fileName、fileSize、fileType 无需手动@Mapping
- * 2. 数据库实体独有业务字段（文件路径、任务ID、处理状态、切片数）前端DTO无入参，入库前由业务层手动赋值
- * 3. BaseEntity父类字段（id、租户ID、创建时间等）由MyBatis-Plus自动填充，转换时不处理
- * 4. 反向转换：实体转回DTO仅保留前端原始上传参数，丢弃数据库业务扩展字段
+ * 文档对象转换器（MapStruct）。
  *
- * 核心优势：
- * 1. 零反射，性能远高于BeanUtils、ModelMapper
- * 2. 编译期校验字段名、类型，写错直接编译报错，线上无转换异常
- * 3. 自动生成get/set赋值代码，无重复模板代码
- */
-
-/**
- * DTO <-> Entity 转换器
- * componentModel = "spring" → 交给Spring管理，可@Autowired注入
+ * 职责：集中管理文档相关的所有 DTO ↔ Entity 转换。
+ *
+ * =========================================================================
+ * 为什么需要 Convertor 层？（企业级规范的核心问题）
+ * =========================================================================
+ * 1. 安全性：Entity 包含 storageFileName（存储路径）、tenantId（租户ID）等内部字段，
+ *    直接暴露给前端会造成安全隐患。
+ * 2. 解耦：数据库表结构变更（如字段改名），只要 DTO 不变，前端就无需改动。
+ * 3. 灵活性：可以组合多张表的数据，或对字段进行格式化（如日期转字符串）。
+ * 4. 性能：MapStruct 编译期生成代码，等价于手写 setter，无反射损耗。
+ *
+ * =========================================================================
+ * MapStruct vs BeanUtils（为什么选 MapStruct？）
+ * =========================================================================
+ * | 特性          | BeanUtils (反射)          | MapStruct (编译期生成)     |
+ * |---------------|---------------------------|---------------------------|
+ * | 执行方式       | 运行时反射                 | 编译期生成 .class 代码     |
+ * | 性能          | 慢（有反射开销）           | 快（等价于手写 setter）    |
+ * | 字段名不匹配   | 静默失败（不报错）         | 编译期报错（强制修正）     |
+ * | 类型不匹配     | 运行时 ClassCastException | 编译期报错                 |
+ * | 调试          | 困难（看不见转换过程）     | 可以看生成的代码           |
+ *
+ * =========================================================================
+ * 核心配置说明
+ * =========================================================================
+ * componentModel = "spring"
+ *   → 让 Spring 管理该 Mapper 实例，可在 Service 层用 @Autowired 注入。
+ *
+ * nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
+ *   → 更新操作时，如果 DTO 中某个字段为 null，不覆盖 Entity 的原有值。
+ *   → 解决了“部分更新时，未传字段被置 null”的经典问题。
+ *
+ * @author NebulaMind
  */
 @Mapper(
         componentModel = "spring",
-        // 更新时，DTO中null字段不覆盖Entity原有数据（重点！解决更新丢字段）
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
 )
 public interface DocumentConvert {
 
-    /**
-     * 【正向转换：前端上传DTO → 数据库Document实体】
-     * 使用时机：接口收到DocumentUploadRequest参数，准备插入数据库前调用
-     * @param uploadRequest 前端上传文件基础信息DTO（文件名、大小、文件类型）
-     * @return Document 待入库数据库实体
-     * 映射逻辑：
-     * 自动映射：fileName / fileSize / fileType 三者字段名、类型完全一致，MapStruct自动赋值
-     * 不自动映射字段说明（需要业务代码手动填充）：
-     * 1. filePath：文件上传至存储服务后的完整存储路径（OSS/本地磁盘路径，上传成功后赋值）
-     * 2. status：文档处理状态，新建文档默认 0-待处理
-     * 3. taskId：文档解析异步任务ID，发起解析任务后赋值
-     * 4. chunkCount：文档切片分段数量，解析切片后赋值
-     * 父类BaseEntity字段：id(雪花ID)、tenantId(多租户)、createTime、updateTime、isDeleted 由MyBatis-Plus自动填充，转换不处理
-     */
+    // ================================================================
+    // 场景1：上传（前端 → 数据库）
+    // ================================================================
 
-    // DTO -> 实体
+    /**
+     * 【正向转换】将前端上传 DTO 转换为数据库实体。
+     *
+     * 使用时机：用户上传文档时，将 DocumentUploadRequest 转为 Document 实体。
+     *
+     * 映射规则：
+     *   - 自动映射：字段名相同、类型相同的字段（如 originalFileName、fileSize、mimeType）。
+     *   - 忽略字段：Document 实体中有，但 DTO 中没有的字段（如 storageFileName、fileUrl、parseStatus），
+     *     由 Service 层在后续逻辑中手动赋值。
+     *
+     * 你已有的方法，保持不变。
+     *
+     * @param uploadRequest 前端上传请求 DTO（包含文件元数据）
+     * @return Document 数据库实体（待补充业务字段后入库）
+     */
     Document toEntity(DocumentUploadRequest uploadRequest);
 
+    // ================================================================
+    // 场景2：查询详情（数据库 → 前端）
+    // ================================================================
+
     /**
-     * 【反向转换：数据库Document实体 → 前端上传原始DTO】
-     * 使用时机：查询数据库文档记录，需要返回前端原始上传文件基础信息时调用
-     * @param document 数据库文档实体
-     * @return DocumentUploadRequest 仅包含前端上传时传入的三个基础字段
-     * 映射逻辑：
-     * 仅映射前端提交过的fileName、fileSize、fileType，实体中其他数据库专属字段全部丢弃
-     * 适用场景：文档详情页展示文件基础信息、文件列表展示文件名大小类型
+     * 【查询详情转换】将数据库 Document 实体转换为 DocumentResponse DTO。
+     *
+     * 使用时机：GET /api/v1/documents/{id} 接口返回。
+     *
+     * 映射规则：
+     *   - 自动映射：字段名相同、类型相同的字段（id、originalFileName、fileSize、fileUrl）。
+     *   - 特殊处理：
+     *       - parseStatus：如果数据库里没有该字段，Service 层会手动填充默认值（PENDING）。
+     *       - parseResult：详情页需要返回大 JSON 数据，此处正常映射。
+     *
+     * 为什么需要单独的 toResponse() 而不是复用 toDTO()？
+     *   因为 DocumentUploadRequest 是“输入型 DTO”，包含 MultipartFile 等上传专用字段；
+     *   DocumentResponse 是“输出型 DTO”，包含解析状态、进度、结果等查询专用字段。
+     *   两者职责不同，强行复用会造成字段污染。
+     *
+     * @param entity 数据库实体（包含所有业务字段）
+     * @return DocumentResponse 前端需要的响应 DTO
      */
+    @Mapping(target = "parseStatus", ignore = true)   // 由 Service 层手动填充
+    @Mapping(target = "parseProgress", ignore = true) // 由 Service 层手动填充
+    @Mapping(target = "errorMessage", ignore = true)  // 由 Service 层手动填充
+    DocumentResponse toResponse(Document entity);
 
-    DocumentUploadRequest toDTO(Document document);
+    // ================================================================
+    // 场景3：更新（前端 → 已有数据库实体）【可选，但强烈建议保留】
+    // ================================================================
 
-    default String getSuffix(String fileName) {
-        if(fileName == null || !fileName.contains(".")) return "unknown";
-        return fileName.substring(fileName.lastIndexOf(".") + 1);
+    /**
+     * 【更新转换】将前端 DTO 的字段合并到已有的数据库实体（支持部分更新）。
+     *
+     * 使用时机：PUT /api/v1/documents/{id} 接口，用户修改文档备注或分类时。
+     *
+     * 核心机制说明：
+     *   - @MappingTarget 注解：表示这是一个“目标对象”，不是“新建对象”。
+     *   - 配合 IGNORE 策略：如果 DTO 中某个字段为 null，则不覆盖 Entity 的原有值。
+     *
+     * 举例说明：
+     *   数据库里有一条记录：{id:1, originalFileName:"典则.pdf", remark:"重要文件"}
+     *   前端只传：{remark:"已更新为2024版"}
+     *   调用 updateEntity(dto, existingEntity) 后：
+     *     - originalFileName 保持不变（因为 DTO 中该字段为 null，不覆盖）
+     *     - remark 变为 "已更新为2024版"
+     *
+     * 这解决了“前端只传部分字段，其他字段不能丢失”的经典更新问题。
+     *
+     * @param dto   前端传入的更新数据（只包含需要修改的字段）
+     * @param entity 数据库已有的实体（会被修改，直接作用于传入的对象）
+     */
+    void updateEntity(DocumentUploadRequest dto, @MappingTarget Document entity);
+
+    // ================================================================
+    // 场景4：分页列表（数据库 → 前端列表项）【可选，可按需启用】
+    // ================================================================
+
+    /**
+     * 【列表转换】将 Document 实体转换为轻量级列表项 DTO。
+     *
+     * 使用时机：GET /api/v1/documents/list 接口，展示文档列表时。
+     *
+     * 为什么列表和详情要分开？
+     *   列表页不需要 parseResult（大 JSON 字段），只展示文件名、状态、时间等元数据。
+     *   如果复用 toResponse()，每次列表查询都会加载 parseResult 大字段，造成性能浪费。
+     *
+     * 当前实现：直接复用 toResponse()，因为 DocumentResponse 包含了列表所需的字段。
+     * 企业级规范建议：当列表字段和详情字段差异较大时，建议拆分为独立的 DTO 类。
+     *
+     * 如果你后期需要独立的 DocumentListResponse 类，可以新增方法：
+     *   DocumentListResponse toListResponse(Document entity);
+     *
+     * @param entity 数据库实体
+     * @return DocumentResponse 列表项 DTO（轻量级，不含大文本字段）
+     */
+    default DocumentResponse toListResponse(Document entity) {
+        // 直接复用 toResponse 方法，因为 DocumentResponse 包含了列表所需的基本字段。
+        // 注：如果你想明确区分列表和详情，可以单独定义一个 DocumentListResponse 类。
+        return toResponse(entity);
     }
+
+    // ================================================================
+    // 工具方法
+    // ================================================================
+
+    /**
+     * 提取文件后缀名（从原始文件名中解析）。
+     *
+     * 示例：
+     *   getSuffix("典则.pdf")     → "pdf"
+     *   getSuffix("设计图.DOCX")   → "docx"
+     *   getSuffix("无后缀文件")    → "unknown"
+     *
+     * 为什么用 default 方法？
+     *   因为这是“纯工具函数”，不依赖任何外部资源，也不需要 MapStruct 生成代码。
+     *   default 方法在 Java 8 接口中允许提供默认实现。
+     *
+     * @param fileName 原始文件名
+     * @return 小写的文件后缀，如果无后缀则返回 "unknown"
+     */
+    default String getSuffix(String fileName) {
+        if (fileName == null || !fileName.contains(".")) {
+            return "unknown";
+        }
+        // 取最后一个点后面的部分，转为小写
+        return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+    }
+
+    // ================================================================
+    // 废弃方法（已移除，不推荐使用）
+    // ================================================================
+
+    /**
+     * 【已移除】DocumentUploadRequest toDTO(Document document) 方法。
+     *
+     * 原因：用上传 DTO 作为响应 DTO，会导致 MultipartFile 字段为空，语义混乱。
+     * 请使用 toResponse() 替代。
+     */
+    // DocumentUploadRequest toDTO(Document document); // ❌ 不推荐
+
 }

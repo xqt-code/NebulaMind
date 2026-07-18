@@ -2,6 +2,7 @@ package com.nebulamind.kb.api.controller;
 
 import com.nebulamind.kb.common.result.Result;
 import com.nebulamind.kb.common.result.ResultCode;
+import com.nebulamind.kb.service.dto.DocumentResponse;
 import com.nebulamind.kb.service.dto.DocumentUploadRequest;
 import com.nebulamind.kb.service.service.DocumentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,10 +72,11 @@ public class DocumentController {
      */
     @Operation(summary = "获取文档详情")
     @GetMapping("/{id}")
-    public Result<Void> detail(
+    public Result<DocumentResponse> detail(
             @Parameter(description = "文档 ID", required = true) @PathVariable Long id) {
         // TODO: 实现文档详情查询逻辑
-        return Result.success(null);
+        DocumentResponse response = documentService.getDocumentDetail(id);
+        return Result.success(response);
     }
 
     /**
